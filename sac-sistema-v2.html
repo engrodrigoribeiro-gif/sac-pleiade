@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAC — Plêiade</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --canvas:    #F7F6F3;
+  --surface:   #FFFFFF;
+  --border:    #EAEAEA;
+  --text:      #2F3437;
+  --muted:     #787774;
+  --ink:       #111111;
+  --green-bg:  #EDF3EC;
+  --green-txt: #346538;
+  --red-bg:    #FDEBEC;
+  --red-txt:   #9F2F2D;
+  --blue-bg:   #E1F3FE;
+  --blue-txt:  #1F6C9F;
+  --yellow-bg: #FBF3DB;
+  --yellow-txt:#956400;
+  --font: 'Helvetica Neue', 'SF Pro Display', Arial, sans-serif;
+  --mono: 'SF Mono', 'Geist Mono', 'Courier New', monospace;
+}
+
+html { font-size: 15px; }
+body { font-family: var(--font); background: var(--canvas); color: var(--text); line-height: 1.6; min-height: 100vh; }
+
+/* LOGIN */
+#tela-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--canvas);
+}
+.login-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+}
+.login-logo { font-size: 13px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); margin-bottom: 4px; }
+.login-sub  { font-size: 12px; color: var(--muted); margin-bottom: 32px; }
+.login-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 8px; }
+.login-desc  { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.login-err   { font-size: 12px; color: var(--red-txt); margin-top: 16px; display: none; }
+
+/* LAYOUT */
+#tela-app { display: none; }
+.shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 28px 20px;
+  position: sticky; top: 0;
+  height: 100vh; overflow-y: auto;
+}
+.logo     { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); margin-bottom: 4px; }
+.logo-sub { font-size: 11px; color: var(--muted); margin-bottom: 28px; }
+
+.user-info {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px; background: var(--canvas);
+  border-radius: 8px; margin-bottom: 24px;
+}
+.user-avatar { width: 28px; height: 28px; border-radius: 50%; }
+.user-name   { font-size: 12px; color: var(--text); font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-logout  { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; }
+.btn-logout:hover { color: var(--red-txt); }
+
+.nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; margin-top: 20px; }
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 6px;
+  font-size: 13px; color: var(--text);
+  cursor: pointer; border: none; background: none;
+  width: 100%; text-align: left;
+  transition: background 150ms;
+}
+.nav-item:hover  { background: var(--canvas); }
+.nav-item.active { background: var(--ink); color: #fff; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.4; flex-shrink: 0; }
+
+.main { padding: 48px 52px; max-width: 960px; }
+
+h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; color: var(--ink); margin-bottom: 6px; }
+h2 { font-size: 17px; font-weight: 600; color: var(--ink); margin-bottom: 16px; }
+.page-sub { font-size: 13px; color: var(--muted); margin-bottom: 36px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 16px; animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+.bento { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+.bento-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.bento-num { font-size: 28px; font-weight: 600; color: var(--ink); line-height: 1; }
+.bento-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 6px; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 5px; font-size: 13px; font-family: var(--font); font-weight: 500; cursor: pointer; border: none; transition: transform 100ms, background 150ms; }
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover { background: #333; }
+.btn-ghost   { background: none; color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--canvas); }
+.btn-green   { background: var(--green-bg);  color: var(--green-txt);  border: 1px solid #c5dcc4; }
+.btn-red     { background: var(--red-bg);    color: var(--red-txt);    border: 1px solid #f5c6c6; }
+.btn-yellow  { background: var(--yellow-bg); color: var(--yellow-txt); border: 1px solid #e8d89a; }
+.btn-blue    { background: var(--blue-bg);   color: var(--blue-txt);   border: 1px solid #a8d4ef; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.badge-green  { background: var(--green-bg);  color: var(--green-txt); }
+.badge-red    { background: var(--red-bg);    color: var(--red-txt); }
+.badge-yellow { background: var(--yellow-bg); color: var(--yellow-txt); }
+.badge-blue   { background: var(--blue-bg);   color: var(--blue-txt); }
+.badge-gray   { background: #F0F0EE; color: var(--muted); }
+
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.field input, .field select, .field textarea {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; font-family: var(--font);
+  background: var(--surface); color: var(--text);
+  outline: none; transition: border-color 150ms;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #aaa; }
+.field textarea { min-height: 80px; resize: vertical; }
+.inline-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.relatorio-box {
+  background: var(--canvas); border: 1px solid var(--border);
+  border-radius: 8px; padding: 20px;
+  font-size: 13px; white-space: pre-wrap; line-height: 1.7;
+  max-height: 520px; overflow-y: auto;
+  font-family: var(--mono); color: var(--text);
+}
+
+.msg-item { display: grid; grid-template-columns: 72px 140px 80px 1fr; gap: 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.msg-item:last-child { border-bottom: none; }
+.msg-hora { font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 2px; }
+.msg-nome { font-weight: 500; color: var(--ink); }
+
+.sit-item { padding: 16px 0; border-bottom: 1px solid var(--border); }
+.sit-item:last-child { border-bottom: none; }
+.sit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.sit-nome   { font-weight: 600; font-size: 14px; color: var(--ink); }
+.sit-assunto { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--ink); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.page { display: none; }
+.page.active { display: block; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.18); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 440px; max-width: 94vw; }
+.modal h2 { margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="tela-login">
+  <div class="login-box">
+    <div class="login-logo">Plêiade</div>
+    <div class="login-sub">Sistema SAC</div>
+    <div class="login-title">Entrar</div>
+    <div class="login-desc">Acesso restrito. Use sua conta Google autorizada.</div>
+    <div id="g_id_onload"
+      data-client_id="172838649418-j4q49obmijplq645aov8su3r8fkfkkqn.apps.googleusercontent.com"
+      data-callback="onGoogleLogin"
+      data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+      data-type="standard"
+      data-size="large"
+      data-theme="outline"
+      data-text="signin_with"
+      data-shape="rectangular"
+      data-logo_alignment="left">
+    </div>
+    <div class="login-err" id="loginErr">Acesso negado. Este email não está autorizado.</div>
+  </div>
+</div>
+
+<!-- TELA DO APP -->
+<div id="tela-app">
+
+  <!-- MODAL NOVA SITUACAO -->
+  <div class="modal-overlay" id="modalSit">
+    <div class="modal">
+      <h2>Nova Situação</h2>
+      <div class="field"><label>Nome do contato</label><input type="text" id="sitNome"></div>
+      <div class="field"><label>Número</label><input type="text" id="sitNumero"></div>
+      <div class="field"><label>Assunto / descrição</label><textarea id="sitAssunto"></textarea></div>
+      <div class="field">
+        <label>Status inicial</label>
+        <select id="sitStatus">
+          <option value="andamento">Em andamento</option>
+          <option value="aguardando">Aguardando resposta</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="salvarSituacao()">Salvar situação</button>
+        <button class="btn btn-ghost"   onclick="fecharModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="logo">Plêiade</div>
+      <div class="logo-sub">Sistema SAC</div>
+
+      <div class="user-info">
+        <img class="user-avatar" id="userAvatar" src="" alt="">
+        <span class="user-name" id="userName"></span>
+        <button class="btn-logout" onclick="logout()">Sair</button>
+      </div>
+
+      <div class="nav-label">Principal</div>
+      <button class="nav-item active" onclick="ir('dashboard')"><span class="nav-dot"></span> Dashboard</button>
+      <button class="nav-item" onclick="ir('relatorios')"><span class="nav-dot"></span> Relatórios</button>
+      <button class="nav-item" onclick="ir('mensagens')"><span class="nav-dot"></span> Mensagens</button>
+      <button class="nav-item" onclick="ir('situacoes')"><span class="nav-dot"></span> Situações</button>
+    </aside>
+
+    <main class="main">
+
+      <!-- DASHBOARD -->
+      <div id="pg-dashboard" class="page active">
+        <h1>Dashboard</h1>
+        <div class="page-sub" id="dashSub">Carregando dados de hoje...</div>
+        <div class="bento">
+          <div class="bento-item"><div class="bento-num" id="bnTotal">—</div><div class="bento-lbl">Mensagens hoje</div></div>
+          <div class="bento-item"><div class="bento-num" id="bnRecebidas">—</div><div class="bento-lbl">Recebidas</div></div>
+          <div class="bento-item"><div class="bento-num" id="bnSituacoes">—</div><div class="bento-lbl">Situações abertas</div></div>
+        </div>
+        <div class="card">
+          <h2>Gerar relatório de hoje</h2>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="gerarRelatorio('padrao')">Relatório padrão</button>
+            <button class="btn btn-ghost"   onclick="gerarRelatorio('demandas')">Demandas abertas</button>
+            <button class="btn btn-ghost"   onclick="gerarRelatorio('sentimento')">Sentimento</button>
+            <button class="btn btn-ghost"   onclick="gerarRelatorio('resumo')">Resumo executivo</button>
+          </div>
+          <div id="dashRelStatus" style="margin-top:14px;font-size:13px;color:var(--muted);"></div>
+          <div id="dashRelBox" style="display:none;margin-top:14px;">
+            <div class="relatorio-box" id="dashRelTexto"></div>
+            <div class="btn-row" style="margin-top:12px;">
+              <button class="btn btn-ghost" onclick="copiar('dashRelTexto')">Copiar texto</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RELATORIOS -->
+      <div id="pg-relatorios" class="page">
+        <h1>Relatórios</h1>
+        <div class="page-sub">Gere relatórios padrão ou personalizados por período.</div>
+        <div class="card">
+          <h2>Configurar relatório</h2>
+          <div class="inline-fields">
+            <div class="field"><label>Data (DD/MM/AAAA)</label><input type="text" id="relData" placeholder="29/05/2026"></div>
+            <div class="field">
+              <label>Tipo</label>
+              <select id="relTipo" onchange="togglePersonalizado()">
+                <option value="padrao">Padrão completo</option>
+                <option value="demandas">Demandas abertas</option>
+                <option value="sentimento">Sentimento dos contatos</option>
+                <option value="resumo">Resumo executivo</option>
+                <option value="personalizado">Personalizado</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" id="campoPersonalizado" style="display:none;">
+            <label>Instrução personalizada</label>
+            <textarea id="relPrompt" placeholder="Ex: Foque nos contatos que mencionaram prazo ou urgência..."></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="gerarRelatorioCustom()">Gerar relatório</button>
+          </div>
+        </div>
+        <div id="relResultado" style="display:none;" class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h2 style="margin:0;">Resultado</h2>
+            <button class="btn btn-ghost" onclick="copiar('relTexto')">Copiar</button>
+          </div>
+          <div class="relatorio-box" id="relTexto"></div>
+        </div>
+      </div>
+
+      <!-- MENSAGENS -->
+      <div id="pg-mensagens" class="page">
+        <h1>Mensagens</h1>
+        <div class="page-sub">Histórico capturado pelo sistema.</div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <div class="field" style="margin:0;flex:1;">
+              <input type="text" id="msgData" placeholder="Data DD/MM/AAAA (vazio = todas)">
+            </div>
+            <button class="btn btn-primary" onclick="carregarMensagens()">Buscar</button>
+          </div>
+          <div id="msgLista"><span style="color:var(--muted);font-size:13px;">Informe uma data e clique em Buscar.</span></div>
+        </div>
+      </div>
+
+      <!-- SITUACOES -->
+      <div id="pg-situacoes" class="page">
+        <h1>Situações</h1>
+        <div class="page-sub">Gerencie demandas em aberto, andamento e resolvidas.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <span style="font-size:13px;color:var(--muted);" id="sitContagem">Carregando...</span>
+          <button class="btn btn-primary" onclick="abrirModal()">+ Nova situação</button>
+        </div>
+        <div class="card" id="sitLista">
+          <span style="color:var(--muted);font-size:13px;">Carregando situações...</span>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// CONFIG
+// ================================================================
+const BACKEND        = 'https://script.google.com/macros/s/AKfycbzbEubSyIO0AGd5Ab9pk9C9jnRKZLt0qFx2CNFYT1vNXKqYC31I40EkoR39t3bR55aP/exec';
+const TOKEN          = 'pleiade2026sac';
+const EMAILS_ALLOWED = ['eng.rodrigoribeiro@gmail.com'];
+
+// ================================================================
+// LOGIN GOOGLE
+// ================================================================
+function onGoogleLogin(response) {
+  const payload = parseJwt(response.credential);
+  if (!EMAILS_ALLOWED.includes(payload.email)) {
+    document.getElementById('loginErr').style.display = 'block';
+    return;
+  }
+  // Autorizado
+  document.getElementById('tela-login').style.display = 'none';
+  document.getElementById('tela-app').style.display   = 'block';
+  document.getElementById('userName').textContent     = payload.name || payload.email;
+  document.getElementById('userAvatar').src           = payload.picture || '';
+  carregarDashboard();
+}
+
+function parseJwt(token) {
+  const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  return JSON.parse(decodeURIComponent(atob(base64).split('').map(c =>
+    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+}
+
+function logout() {
+  document.getElementById('tela-app').style.display   = 'none';
+  document.getElementById('tela-login').style.display = 'flex';
+  google.accounts.id.disableAutoSelect();
+}
+
+// ================================================================
+// UTILITARIOS
+// ================================================================
+function hoje() {
+  return new Date().toLocaleDateString('pt-BR');
+}
+
+async function api(params) {
+  const url = BACKEND + '?' + new URLSearchParams({ ...params, token: TOKEN }).toString();
+  const r   = await fetch(url, { redirect: 'follow' });
+  const txt = await r.text();
+  try { return JSON.parse(txt); } catch(e) { throw new Error('Resposta inválida: ' + txt.slice(0,200)); }
+}
+
+function badgeStatus(status) {
+  const m = {
+    andamento:   ['badge-yellow', 'Andamento'],
+    aguardando:  ['badge-blue',   'Aguardando'],
+    resolvido:   ['badge-green',  'Resolvido'],
+    arquivado:   ['badge-gray',   'Arquivado'],
+    irrelevante: ['badge-gray',   'Irrelevante'],
+  };
+  const [cls, txt] = m[status] || ['badge-gray', status];
+  return `<span class="badge ${cls}">${txt}</span>`;
+}
+
+function copiar(id) {
+  navigator.clipboard.writeText(document.getElementById(id).textContent);
+}
+
+// ================================================================
+// NAVEGACAO
+// ================================================================
+function ir(pg) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('pg-' + pg).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.textContent.trim().toLowerCase().includes(pg.slice(0,5))) n.classList.add('active');
+  });
+  if (pg === 'situacoes') carregarSituacoes();
+}
+
+// ================================================================
+// DASHBOARD
+// ================================================================
+async function carregarDashboard() {
+  try {
+    const [msgs, sits] = await Promise.all([
+      api({ acao: 'lerMensagens', data: hoje() }),
+      api({ acao: 'lerSituacoes' })
+    ]);
+    const recebidas = Array.isArray(msgs) ? msgs.filter(m => m['Direcao'] === 'recebida').length : 0;
+    document.getElementById('bnTotal').textContent     = Array.isArray(msgs) ? msgs.length : '—';
+    document.getElementById('bnRecebidas').textContent = recebidas;
+    document.getElementById('bnSituacoes').textContent = Array.isArray(sits) ? sits.length : '—';
+    document.getElementById('dashSub').textContent     = 'Hoje, ' + hoje() + ' — dados atualizados agora.';
+  } catch(e) {
+    document.getElementById('dashSub').textContent = 'Erro ao carregar: ' + e.message;
+  }
+}
+
+async function gerarRelatorio(tipo) {
+  const status = document.getElementById('dashRelStatus');
+  const box    = document.getElementById('dashRelBox');
+  const texto  = document.getElementById('dashRelTexto');
+  status.innerHTML  = '<span class="spinner"></span> Gerando via Claude...';
+  box.style.display = 'none';
+  try {
+    const r = await api({ acao: 'gerarRelatorio', data: hoje(), tipo });
+    if (r.erro) throw new Error(r.erro);
+    texto.textContent = r.relatorio;
+    box.style.display = 'block';
+    status.innerHTML  = '<span style="color:var(--green-txt)">Pronto — ' + (r.totalMensagens || 0) + ' mensagens analisadas.</span>';
+  } catch(e) {
+    status.innerHTML = '<span style="color:var(--red-txt)">Erro: ' + e.message + '</span>';
+  }
+}
+
+// ================================================================
+// RELATORIOS CUSTOMIZADOS
+// ================================================================
+function togglePersonalizado() {
+  const v = document.getElementById('relTipo').value;
+  document.getElementById('campoPersonalizado').style.display = v === 'personalizado' ? 'block' : 'none';
+}
+
+async function gerarRelatorioCustom() {
+  const data  = document.getElementById('relData').value || hoje();
+  const tipo  = document.getElementById('relTipo').value;
+  const extra = document.getElementById('relPrompt').value;
+  const res   = document.getElementById('relResultado');
+  const txt   = document.getElementById('relTexto');
+  txt.textContent   = 'Gerando...';
+  res.style.display = 'block';
+  try {
+    const r = await api({ acao: 'gerarRelatorio', data, tipo, promptExtra: extra });
+    if (r.erro) throw new Error(r.erro);
+    txt.textContent = r.relatorio;
+  } catch(e) {
+    txt.textContent = 'Erro: ' + e.message;
+  }
+}
+
+// ================================================================
+// MENSAGENS
+// ================================================================
+async function carregarMensagens() {
+  const data  = document.getElementById('msgData').value;
+  const lista = document.getElementById('msgLista');
+  lista.innerHTML = '<span class="spinner"></span>';
+  try {
+    const msgs = await api({ acao: 'lerMensagens', data: data || undefined });
+    if (!Array.isArray(msgs) || msgs.length === 0) {
+      lista.innerHTML = '<span style="color:var(--muted);font-size:13px;">Nenhuma mensagem encontrada.</span>';
+      return;
+    }
+    lista.innerHTML = msgs.map(m => `
+      <div class="msg-item">
+        <span class="msg-hora">${m['Hora'] || ''}</span>
+        <span class="msg-nome">${m['Nome'] || m['Numero'] || ''}</span>
+        <span>${m['Direcao'] === 'recebida'
+          ? '<span class="badge badge-blue">Recebida</span>'
+          : '<span class="badge badge-gray">Enviada</span>'}</span>
+        <span style="font-size:13px;color:var(--text);">${m['Conteudo'] || ''}</span>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<span style="color:var(--red-txt);font-size:13px;">Erro: ' + e.message + '</span>';
+  }
+}
+
+// ================================================================
+// SITUACOES
+// ================================================================
+async function carregarSituacoes() {
+  const lista = document.getElementById('sitLista');
+  lista.innerHTML = '<span class="spinner"></span>';
+  try {
+    const sits = await api({ acao: 'lerSituacoes' });
+    if (!Array.isArray(sits) || sits.length === 0) {
+      lista.innerHTML = '<span style="color:var(--muted);font-size:13px;">Nenhuma situação aberta.</span>';
+      document.getElementById('sitContagem').textContent = '0 situações';
+      return;
+    }
+    document.getElementById('sitContagem').textContent = sits.length + ' situação(ões) ativa(s)';
+    lista.innerHTML = sits.map(s => `
+      <div class="sit-item">
+        <div class="sit-header">
+          <span class="sit-nome">${s['Nome'] || s['Numero'] || ''}</span>
+          ${badgeStatus(s['Status'])}
+          <span style="font-size:11px;color:var(--muted);margin-left:auto;">Aberto em ${s['DataAbertura'] || ''}</span>
+        </div>
+        <div class="sit-assunto">${s['Assunto'] || ''}</div>
+        ${s['Observacoes'] ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${s['Observacoes']}</div>` : ''}
+        <div class="btn-row">
+          <button class="btn btn-green"  onclick="atualizarSit('${s['ID']}','resolvido')">Resolvido</button>
+          <button class="btn btn-yellow" onclick="atualizarSit('${s['ID']}','andamento')">Em andamento</button>
+          <button class="btn btn-red"    onclick="atualizarSit('${s['ID']}','arquivado')">Arquivar</button>
+          <button class="btn btn-ghost"  onclick="abrirObs('${s['ID']}')">+ Observação</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<span style="color:var(--red-txt);font-size:13px;">Erro: ' + e.message + '</span>';
+  }
+}
+
+async function atualizarSit(id, status, obs) {
+  try {
+    await api({ acao: 'atualizarSituacao', id, status, observacoes: obs || '' });
+    await carregarSituacoes();
+  } catch(e) { alert('Erro ao atualizar: ' + e.message); }
+}
+
+function abrirObs(id) {
+  const obs = prompt('Adicione uma observação:');
+  if (obs) atualizarSit(id, 'andamento', obs);
+}
+
+// ================================================================
+// MODAL
+// ================================================================
+function abrirModal()  { document.getElementById('modalSit').classList.add('open'); }
+function fecharModal() { document.getElementById('modalSit').classList.remove('open'); }
+
+async function salvarSituacao() {
+  const dados = {
+    Nome:    document.getElementById('sitNome').value,
+    Numero:  document.getElementById('sitNumero').value,
+    Assunto: document.getElementById('sitAssunto').value,
+    Status:  document.getElementById('sitStatus').value,
+  };
+  if (!dados.Assunto) { alert('Informe o assunto.'); return; }
+  try {
+    await api({ acao: 'criarSituacao', dados: JSON.stringify(dados) });
+    fecharModal();
+    await carregarSituacoes();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+</script>
+</body>
+</html>
